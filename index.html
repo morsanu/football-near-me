@@ -51,52 +51,59 @@
 
         .select-wrapper {
             position: relative;
+            width: 220px;
         }
 
-        .select-wrapper::after {
-            content: '▼';
-            font-size: 12px;
-            color: var(--primary-color);
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            pointer-events: none;
-        }
-
-        .location-select {
-            appearance: none;
-            padding: 12px 40px 12px 20px;
+        .location-input {
+            width: 100%;
+            padding: 12px 20px;
             border: 2px solid #e0e0e0;
             border-radius: var(--border-radius);
             font-size: 16px;
-            width: 220px;
             background-color: white;
-            cursor: pointer;
             transition: var(--transition);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
 
-        .location-select option {
-            padding: 8px;
-            font-size: 16px;
-        }
-
-        .location-select:disabled {
-            background-color: #f5f5f5;
-            cursor: not-allowed;
-            border-color: #e0e0e0;
-            color: #999;
-        }
-
-        .location-select:hover:not(:disabled) {
-            border-color: var(--primary-color);
-        }
-
-        .location-select:focus {
+        .location-input:focus {
             outline: none;
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+        }
+
+        .location-input:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+        }
+
+        .dropdown-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 300px;
+            overflow-y: auto;
+            background-color: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            display: none;
+        }
+
+        .dropdown-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .dropdown-item:hover {
+            background-color: #f0f7ff;
+            color: var(--primary-color);
+        }
+
+        .dropdown-item.selected {
+            background-color: #e8f0fe;
+            color: var(--primary-color);
         }
 
         .nearby-button {
@@ -235,7 +242,7 @@
                 gap: 10px;
             }
 
-            .location-select {
+            .location-input {
                 width: 100%;
             }
 
@@ -248,20 +255,27 @@
 </head>
 <body>
     <div class="header">
-        <h1>Football Fixtures</h1>
+        <h1>Football Fixtures Near Me</h1>
     </div>
     
     <div class="search-container">
         <div class="search-controls">
             <div class="select-wrapper">
-                <select id="countrySelect" class="location-select">
-                    <option value="">Select Country</option>
-                </select>
+                <input type="text" 
+                       id="countryInput" 
+                       class="location-input" 
+                       placeholder="Type country name..."
+                       autocomplete="off">
+                <div id="countryDropdown" class="dropdown-list"></div>
             </div>
             <div class="select-wrapper">
-                <select id="citySelect" class="location-select" disabled>
-                    <option value="">Select City</option>
-                </select>
+                <input type="text" 
+                       id="cityInput" 
+                       class="location-input" 
+                       placeholder="Type city name..."
+                       autocomplete="off"
+                       disabled>
+                <div id="cityDropdown" class="dropdown-list"></div>
             </div>
             <button id="nearbyButton" class="nearby-button">
                 📍 Find Nearby Matches
@@ -275,6 +289,8 @@
         let fixturesData = [];
         let countriesData = [];
         let userLocation = null;
+        let selectedCountry = '';
+        let selectedCity = '';
 
         // First load both data sources
         async function initializeData() {
@@ -314,34 +330,43 @@
 
         // Populate country dropdown
         function populateCountries() {
-            const countrySelect = document.getElementById('countrySelect');
-            countrySelect.innerHTML = '<option value="">Select Country</option>';
+            const countryInput = document.getElementById('countryInput');
+            countryInput.innerHTML = '<option value="">Select Country</option>';
             
-            countriesData.forEach(country => {
+            // Sort countries by name
+            const sortedCountries = [...countriesData].sort((a, b) => 
+                a.name.localeCompare(b.name)
+            );
+            
+            sortedCountries.forEach(country => {
                 const option = document.createElement('option');
                 option.value = country.name;
-                // Use the emoji flag and country name
                 option.textContent = `${country.emoji} ${country.name}`;
-                countrySelect.appendChild(option);
+                countryInput.appendChild(option);
             });
         }
 
         // Populate cities dropdown
         function populateCities(countryName) {
-            const citySelect = document.getElementById('citySelect');
-            citySelect.innerHTML = '<option value="">Select City</option>';
+            const cityInput = document.getElementById('cityInput');
+            cityInput.innerHTML = '<option value="">Select City</option>';
             
             const country = countriesData.find(c => c.name === countryName);
             if (country && country.cities) {
-                country.cities.forEach(city => {
+                // Sort cities alphabetically
+                const sortedCities = [...country.cities].sort((a, b) => 
+                    a.name.localeCompare(b.name)
+                );
+                
+                sortedCities.forEach(city => {
                     const option = document.createElement('option');
                     option.value = city.name;
                     option.textContent = city.name;
-                    citySelect.appendChild(option);
+                    cityInput.appendChild(option);
                 });
-                citySelect.disabled = false;
+                cityInput.disabled = false;
             } else {
-                citySelect.disabled = true;
+                cityInput.disabled = true;
             }
         }
 
@@ -357,23 +382,91 @@
 
         // Event Listeners
         document.addEventListener('DOMContentLoaded', () => {
-            const countrySelect = document.getElementById('countrySelect');
-            const citySelect = document.getElementById('citySelect');
+            const countryInput = document.getElementById('countryInput');
+            const cityInput = document.getElementById('cityInput');
 
-            countrySelect.addEventListener('change', (e) => {
-                console.log('Country selected:', e.target.value);
-                const selectedCountry = e.target.value;
-                if (selectedCountry) {
-                    populateCities(selectedCountry);
-                    filterFixturesByLocation(selectedCountry, '');
+            countryInput.addEventListener('input', () => {
+                const searchText = countryInput.value.toLowerCase();
+                const matches = countriesData.filter(country => 
+                    country.name.toLowerCase().includes(searchText)
+                );
+
+                if (searchText && matches.length > 0) {
+                    countryDropdown.innerHTML = matches
+                        .map(country => `
+                            <div class="dropdown-item" data-value="${country.name}">
+                                ${country.emoji} ${country.name}
+                            </div>
+                        `)
+                        .join('');
+                    countryDropdown.style.display = 'block';
+
+                    // Add click handlers to dropdown items
+                    countryDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            selectedCountry = item.dataset.value;
+                            countryInput.value = item.textContent;
+                            countryDropdown.style.display = 'none';
+                            cityInput.disabled = false;
+                            cityInput.value = '';
+                            selectedCity = '';
+                            filterFixturesByLocation(selectedCountry, selectedCity);
+                        });
+                    });
+                } else {
+                    countryDropdown.style.display = 'none';
                 }
             });
 
-            citySelect.addEventListener('change', (e) => {
-                console.log('City selected:', e.target.value);
-                const selectedCity = e.target.value;
-                const selectedCountry = countrySelect.value;
-                filterFixturesByLocation(selectedCountry, selectedCity);
+            cityInput.addEventListener('input', () => {
+                const searchText = cityInput.value.toLowerCase();
+                const country = countriesData.find(c => c.name === selectedCountry);
+
+                console.log('Selected country:', selectedCountry); // Debug
+                console.log('Country data:', country); // Debug
+                console.log('Search text:', searchText); // Debug
+
+                if (country && searchText) {
+                    // Check if cities is an array of strings or array of objects
+                    const cities = Array.isArray(country.cities) ? country.cities : [];
+                    console.log('Available cities:', cities); // Debug
+
+                    const matches = cities.filter(city => {
+                        // Handle both string and object cases
+                        const cityName = typeof city === 'string' ? city : city.name;
+                        return cityName.toLowerCase().includes(searchText);
+                    });
+
+                    console.log('Matching cities:', matches); // Debug
+
+                    if (matches.length > 0) {
+                        cityDropdown.innerHTML = matches
+                            .map(city => {
+                                const cityName = typeof city === 'string' ? city : city.name;
+                                return `
+                                    <div class="dropdown-item" data-value="${cityName}">
+                                        ${cityName}
+                                    </div>
+                                `;
+                            })
+                            .join('');
+                        cityDropdown.style.display = 'block';
+
+                        // Add click handlers to dropdown items
+                        cityDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                            item.addEventListener('click', () => {
+                                selectedCity = item.dataset.value;
+                                cityInput.value = selectedCity;
+                                cityDropdown.style.display = 'none';
+                                filterFixturesByLocation(selectedCountry, selectedCity);
+                            });
+                        });
+                    } else {
+                        cityDropdown.style.display = 'none';
+                    }
+                } else {
+                    cityDropdown.style.display = 'none';
+                }
             });
 
             initializeData();
@@ -497,6 +590,115 @@
                     </div>
                 </div>
             `;
+        }
+
+        function setupCountryAutocomplete() {
+            const countryInput = document.getElementById('countryInput');
+            const countryDropdown = document.getElementById('countryDropdown');
+            const cityInput = document.getElementById('cityInput');
+
+            countryInput.addEventListener('input', () => {
+                const searchText = countryInput.value.toLowerCase();
+                const matches = countriesData.filter(country => 
+                    country.name.toLowerCase().includes(searchText)
+                );
+
+                if (searchText && matches.length > 0) {
+                    countryDropdown.innerHTML = matches
+                        .map(country => `
+                            <div class="dropdown-item" data-value="${country.name}">
+                                ${country.emoji} ${country.name}
+                            </div>
+                        `)
+                        .join('');
+                    countryDropdown.style.display = 'block';
+
+                    // Add click handlers to dropdown items
+                    countryDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            selectedCountry = item.dataset.value;
+                            countryInput.value = item.textContent;
+                            countryDropdown.style.display = 'none';
+                            cityInput.disabled = false;
+                            cityInput.value = '';
+                            selectedCity = '';
+                            filterFixturesByLocation(selectedCountry, selectedCity);
+                        });
+                    });
+                } else {
+                    countryDropdown.style.display = 'none';
+                }
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!countryInput.contains(e.target) && !countryDropdown.contains(e.target)) {
+                    countryDropdown.style.display = 'none';
+                }
+            });
+        }
+
+        function setupCityAutocomplete() {
+            const cityInput = document.getElementById('cityInput');
+            const cityDropdown = document.getElementById('cityDropdown');
+
+            cityInput.addEventListener('input', () => {
+                const searchText = cityInput.value.toLowerCase();
+                const country = countriesData.find(c => c.name === selectedCountry);
+
+                console.log('Selected country:', selectedCountry); // Debug
+                console.log('Country data:', country); // Debug
+                console.log('Search text:', searchText); // Debug
+
+                if (country && searchText) {
+                    // Check if cities is an array of strings or array of objects
+                    const cities = Array.isArray(country.cities) ? country.cities : [];
+                    console.log('Available cities:', cities); // Debug
+
+                    const matches = cities.filter(city => {
+                        // Handle both string and object cases
+                        const cityName = typeof city === 'string' ? city : city.name;
+                        return cityName.toLowerCase().includes(searchText);
+                    });
+
+                    console.log('Matching cities:', matches); // Debug
+
+                    if (matches.length > 0) {
+                        cityDropdown.innerHTML = matches
+                            .map(city => {
+                                const cityName = typeof city === 'string' ? city : city.name;
+                                return `
+                                    <div class="dropdown-item" data-value="${cityName}">
+                                        ${cityName}
+                                    </div>
+                                `;
+                            })
+                            .join('');
+                        cityDropdown.style.display = 'block';
+
+                        // Add click handlers to dropdown items
+                        cityDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                            item.addEventListener('click', () => {
+                                selectedCity = item.dataset.value;
+                                cityInput.value = selectedCity;
+                                cityDropdown.style.display = 'none';
+                                filterFixturesByLocation(selectedCountry, selectedCity);
+                            });
+                        });
+                    } else {
+                        cityDropdown.style.display = 'none';
+                    }
+                } else {
+                    cityDropdown.style.display = 'none';
+                }
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!cityInput.contains(e.target) && !cityDropdown.contains(e.target)) {
+                    cityDropdown.style.display = 'none';
+                }
+            });
         }
     </script>
 </body>
