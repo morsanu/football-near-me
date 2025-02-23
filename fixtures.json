@@ -131,6 +131,130 @@
           }
         ]
       }
+    },
+    {
+      "id": "f003",
+      "venue": {
+        "name": "Stadionul Municipal",
+        "city": "Brașov",
+        "country": "Romania",
+        "coordinates": {
+          "latitude": 45.6426,
+          "longitude": 25.6414
+        },
+        "capacity": 8500,
+        "surface": "Grass"
+      },
+      "match": {
+        "dateTime": "2024-04-14T15:00:00Z",
+        "competition": {
+          "name": "Liga II",
+          "round": "Matchday 28",
+          "logo": "https://example.com/liga2-logo.png"
+        },
+        "homeTeam": {
+          "id": "fcb002",
+          "name": "FC Brașov",
+          "shortName": "BRA",
+          "logo": "https://example.com/brasov-logo.png",
+          "primaryColor": "#FFDD00",
+          "secondaryColor": "#000000"
+        },
+        "awayTeam": {
+          "id": "csc001",
+          "name": "CSC Șelimbăr",
+          "shortName": "SEL",
+          "logo": "https://example.com/selimbar-logo.png",
+          "primaryColor": "#0000FF",
+          "secondaryColor": "#FFFFFF"
+        },
+        "status": "SCHEDULED",
+        "referees": {
+          "main": "Adrian Cojocaru",
+          "assistants": ["Mircea Orbuleț", "Marius Marchidanu"],
+          "fourth": "Sebastian Colțescu",
+          "var": null
+        }
+      },
+      "ticketing": {
+        "available": true,
+        "priceRange": {
+          "min": 15,
+          "max": 50,
+          "currency": "RON"
+        },
+        "ticketingUrl": "https://example.com/tickets/f003"
+      },
+      "broadcast": {
+        "channels": [
+          {
+            "name": "Digi Sport",
+            "country": "Romania"
+          }
+        ]
+      }
+    },
+    {
+      "id": "f004",
+      "venue": {
+        "name": "Stadionul Municipal",
+        "city": "Brașov",
+        "country": "Romania",
+        "coordinates": {
+          "latitude": 45.6426,
+          "longitude": 25.6414
+        },
+        "capacity": 8500,
+        "surface": "Grass"
+      },
+      "match": {
+        "dateTime": "2024-04-21T15:00:00Z",
+        "competition": {
+          "name": "Liga II",
+          "round": "Matchday 29",
+          "logo": "https://example.com/liga2-logo.png"
+        },
+        "homeTeam": {
+          "id": "fcb002",
+          "name": "FC Brașov",
+          "shortName": "BRA",
+          "logo": "https://example.com/brasov-logo.png",
+          "primaryColor": "#FFDD00",
+          "secondaryColor": "#000000"
+        },
+        "awayTeam": {
+          "id": "csc002",
+          "name": "Unirea Dej",
+          "shortName": "DEJ",
+          "logo": "https://example.com/dej-logo.png",
+          "primaryColor": "#FFFFFF",
+          "secondaryColor": "#000000"
+        },
+        "status": "SCHEDULED",
+        "referees": {
+          "main": "Horațiu Feșnic",
+          "assistants": ["Valentin Avram", "Daniel Mitruți"],
+          "fourth": "Marcel Bîrsan",
+          "var": null
+        }
+      },
+      "ticketing": {
+        "available": true,
+        "priceRange": {
+          "min": 15,
+          "max": 50,
+          "currency": "RON"
+        },
+        "ticketingUrl": "https://example.com/tickets/f004"
+      },
+      "broadcast": {
+        "channels": [
+          {
+            "name": "Digi Sport",
+            "country": "Romania"
+          }
+        ]
+      }
     }
   ]
 }

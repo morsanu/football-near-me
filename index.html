@@ -35,28 +35,101 @@
         }
 
         .search-container {
-            text-align: center;
             margin: 30px 0;
             position: sticky;
             top: 20px;
             z-index: 100;
         }
 
-        #searchInput {
-            padding: 16px 24px;
-            width: 400px;
-            font-size: 16px;
-            border: none;
-            border-radius: var(--border-radius);
-            background-color: white;
-            box-shadow: var(--shadow);
-            transition: var(--transition);
+        .search-controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 10px;
         }
 
-        #searchInput:focus {
+        .select-wrapper {
+            position: relative;
+        }
+
+        .select-wrapper::after {
+            content: '▼';
+            font-size: 12px;
+            color: var(--primary-color);
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .location-select {
+            appearance: none;
+            padding: 12px 40px 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            width: 220px;
+            background-color: white;
+            cursor: pointer;
+            transition: var(--transition);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        .location-select option {
+            padding: 8px;
+            font-size: 16px;
+        }
+
+        .location-select:disabled {
+            background-color: #f5f5f5;
+            cursor: not-allowed;
+            border-color: #e0e0e0;
+            color: #999;
+        }
+
+        .location-select:hover:not(:disabled) {
+            border-color: var(--primary-color);
+        }
+
+        .location-select:focus {
             outline: none;
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.1);
+        }
+
+        .nearby-button {
+            padding: 12px 24px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .nearby-button:hover {
+            background-color: #1557b0;
             transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .nearby-button:active {
+            transform: translateY(0);
+        }
+
+        .location-status {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+            height: 20px;
         }
 
         .date-group {
@@ -157,17 +230,18 @@
         }
 
         @media (max-width: 768px) {
-            #searchInput {
-                width: 90%;
-            }
-
-            .fixture {
-                grid-template-columns: 1fr;
+            .search-controls {
+                flex-direction: column;
                 gap: 10px;
             }
 
-            .competition-info {
-                text-align: left;
+            .location-select {
+                width: 100%;
+            }
+
+            .nearby-button {
+                width: 100%;
+                justify-content: center;
             }
         }
     </style>
@@ -178,36 +252,172 @@
     </div>
     
     <div class="search-container">
-        <input type="text" 
-               id="searchInput" 
-               placeholder="🔍 Search by city, country, or stadium..."
-               autocomplete="off">
+        <div class="search-controls">
+            <div class="select-wrapper">
+                <select id="countrySelect" class="location-select">
+                    <option value="">Select Country</option>
+                </select>
+            </div>
+            <div class="select-wrapper">
+                <select id="citySelect" class="location-select" disabled>
+                    <option value="">Select City</option>
+                </select>
+            </div>
+            <button id="nearbyButton" class="nearby-button">
+                📍 Find Nearby Matches
+            </button>
+        </div>
+        <div id="locationStatus" class="location-status"></div>
     </div>
     <div id="results"></div>
 
     <script>
         let fixturesData = [];
+        let countriesData = [];
+        let userLocation = null;
 
-        // Fetch the fixtures data when the page loads
-        fetch('fixtures.json')
-            .then(response => response.json())
-            .then(data => {
-                fixturesData = data.fixtures;
-                // Initial display of all fixtures
+        // First load both data sources
+        async function initializeData() {
+            try {
+                // Load fixtures
+                const fixturesResponse = await fetch('fixtures.json');
+                const fixturesResult = await fixturesResponse.json();
+                fixturesData = fixturesResult.fixtures;
                 displayFixtures(fixturesData);
-            })
-            .catch(error => console.error('Error loading fixtures:', error));
 
-        // Add event listener for search input
-        document.getElementById('searchInput').addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
+                // Load countries data from local file
+                const countriesResponse = await fetch('countries+cities.json');
+                countriesData = await countriesResponse.json();
+                console.log('Countries loaded:', countriesData.length);
+                populateCountries();
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        // Calculate distance between two points
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth's radius in kilometers
+            const dLat = toRad(lat2 - lat1);
+            const dLon = toRad(lon2 - lon1);
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function toRad(degrees) {
+            return degrees * (Math.PI/180);
+        }
+
+        // Populate country dropdown
+        function populateCountries() {
+            const countrySelect = document.getElementById('countrySelect');
+            countrySelect.innerHTML = '<option value="">Select Country</option>';
+            
+            countriesData.forEach(country => {
+                const option = document.createElement('option');
+                option.value = country.name;
+                // Use the emoji flag and country name
+                option.textContent = `${country.emoji} ${country.name}`;
+                countrySelect.appendChild(option);
+            });
+        }
+
+        // Populate cities dropdown
+        function populateCities(countryName) {
+            const citySelect = document.getElementById('citySelect');
+            citySelect.innerHTML = '<option value="">Select City</option>';
+            
+            const country = countriesData.find(c => c.name === countryName);
+            if (country && country.cities) {
+                country.cities.forEach(city => {
+                    const option = document.createElement('option');
+                    option.value = city.name;
+                    option.textContent = city.name;
+                    citySelect.appendChild(option);
+                });
+                citySelect.disabled = false;
+            } else {
+                citySelect.disabled = true;
+            }
+        }
+
+        // Filter fixtures by location
+        function filterFixturesByLocation(country, city) {
             const filteredFixtures = fixturesData.filter(fixture => {
-                const venue = fixture.venue;
-                return venue.city.toLowerCase().includes(searchTerm) ||
-                       venue.country.toLowerCase().includes(searchTerm) ||
-                       venue.name.toLowerCase().includes(searchTerm);
+                const matchesCountry = !country || fixture.venue.country === country;
+                const matchesCity = !city || fixture.venue.city === city;
+                return matchesCountry && matchesCity;
             });
             displayFixtures(filteredFixtures);
+        }
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            const countrySelect = document.getElementById('countrySelect');
+            const citySelect = document.getElementById('citySelect');
+
+            countrySelect.addEventListener('change', (e) => {
+                console.log('Country selected:', e.target.value);
+                const selectedCountry = e.target.value;
+                if (selectedCountry) {
+                    populateCities(selectedCountry);
+                    filterFixturesByLocation(selectedCountry, '');
+                }
+            });
+
+            citySelect.addEventListener('change', (e) => {
+                console.log('City selected:', e.target.value);
+                const selectedCity = e.target.value;
+                const selectedCountry = countrySelect.value;
+                filterFixturesByLocation(selectedCountry, selectedCity);
+            });
+
+            initializeData();
+
+            // Nearby button event
+            document.getElementById('nearbyButton').addEventListener('click', () => {
+                const statusDiv = document.getElementById('locationStatus');
+                statusDiv.textContent = "Requesting location access...";
+
+                if ("geolocation" in navigator) {
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            userLocation = {
+                                lat: position.coords.latitude,
+                                lon: position.coords.longitude
+                            };
+                            statusDiv.textContent = "Location accessed successfully!";
+                            console.log('User location:', userLocation);
+                            
+                            // Filter fixtures within 100km
+                            const nearbyFixtures = fixturesData.filter(fixture => {
+                                const distance = calculateDistance(
+                                    userLocation.lat,
+                                    userLocation.lon,
+                                    fixture.venue.coordinates.latitude,
+                                    fixture.venue.coordinates.longitude
+                                );
+                                console.log(`Distance to ${fixture.venue.name}: ${distance}km`);
+                                fixture.distance = distance;
+                                return distance <= 100;
+                            });
+
+                            console.log('Nearby fixtures:', nearbyFixtures);
+                            displayFixtures(nearbyFixtures);
+                        },
+                        (error) => {
+                            console.error('Geolocation error:', error);
+                            statusDiv.textContent = `Error accessing location: ${error.message}`;
+                        }
+                    );
+                } else {
+                    statusDiv.textContent = "Geolocation is not supported by your browser";
+                }
+            });
         });
 
         function displayFixtures(fixtures) {
