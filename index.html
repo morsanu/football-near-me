@@ -372,12 +372,40 @@
 
         // Filter fixtures by location
         function filterFixturesByLocation(country, city) {
-            const filteredFixtures = fixturesData.filter(fixture => {
-                if (city) {
-                    return fixture.venue.city === city && fixture.venue.country === country;
+            let filteredFixtures = fixturesData;
+            
+            if (city) {
+                const countryData = countriesData.find(c => c.name === country);
+                if (countryData && Array.isArray(countryData.cities)) {
+                    const cityData = countryData.cities.find(c => 
+                        (typeof c === 'string' ? c : c.name) === city
+                    );
+                    
+                    if (cityData && cityData.latitude && cityData.longitude) {
+                        const cityLat = parseFloat(cityData.latitude);
+                        const cityLon = parseFloat(cityData.longitude);
+                        
+                        filteredFixtures = fixturesData.filter(fixture => {
+                            const distance = calculateDistance(
+                                cityLat,
+                                cityLon,
+                                fixture.venue.coordinates.latitude,
+                                fixture.venue.coordinates.longitude
+                            );
+                            // Round the distance to the nearest integer
+                            fixture.distance = Math.round(distance);
+                            return distance <= 100;
+                        });
+                        
+                        filteredFixtures.sort((a, b) => a.distance - b.distance);
+                    }
                 }
-                return fixture.venue.country === country;
-            });
+            } else if (country) {
+                filteredFixtures = fixturesData.filter(fixture => 
+                    fixture.venue.country === country
+                );
+            }
+            
             displayFixtures(filteredFixtures);
         }
 
@@ -482,6 +510,13 @@
                 minute: '2-digit'
             });
 
+            const venueInfo = `
+                <div class="venue-info">
+                    <span>📍 ${fixture.venue.name}, ${fixture.venue.city}</span>
+                    ${fixture.distance ? `<span>(${Math.round(fixture.distance)}km away)</span>` : ''}
+                </div>
+            `;
+
             return `
                 <div class="fixture">
                     <div class="match-time">${matchTime}</div>
@@ -498,9 +533,7 @@
                     </div>
                     <div class="competition-info">
                         <div class="competition-name">${fixture.match.competition.name}</div>
-                        <div class="venue-info">
-                            ${fixture.venue.name}, ${fixture.venue.city}, ${fixture.venue.country}
-                        </div>
+                        ${venueInfo}
                     </div>
                 </div>
             `;
