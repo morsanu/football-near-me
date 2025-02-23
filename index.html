@@ -36,22 +36,27 @@
 
         .search-container {
             margin: 30px 0;
-            position: sticky;
-            top: 20px;
-            z-index: 100;
+            position: relative;
         }
 
         .search-controls {
             display: flex;
             gap: 15px;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
             margin-bottom: 10px;
+            position: relative;
         }
 
         .select-wrapper {
             position: relative;
-            width: 220px;
+            width: 400px; /* Increased width for single search box */
+            z-index: 2;
+        }
+
+        /* Increase z-index when wrapper contains focused input */
+        .select-wrapper:focus-within {
+            z-index: 3;  /* Higher z-index when focused */
         }
 
         .location-input {
@@ -77,21 +82,21 @@
 
         .dropdown-list {
             position: absolute;
-            top: 100%;
+            top: calc(100% + 4px);
             left: 0;
             right: 0;
             max-height: 300px;
             overflow-y: auto;
             background-color: white;
             border: 1px solid #e0e0e0;
-            border-radius: 0 0 var(--border-radius) var(--border-radius);
+            border-radius: var(--border-radius);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             z-index: 1000;
             display: none;
         }
 
         .dropdown-item {
-            padding: 10px 20px;
+            padding: 12px 20px;
             cursor: pointer;
             transition: var(--transition);
         }
@@ -107,6 +112,8 @@
         }
 
         .nearby-button {
+            position: relative;
+            z-index: 1;  /* Lower z-index than dropdowns */
             padding: 12px 24px;
             background-color: var(--primary-color);
             color: white;
@@ -239,10 +246,11 @@
         @media (max-width: 768px) {
             .search-controls {
                 flex-direction: column;
+                align-items: stretch;
                 gap: 10px;
             }
 
-            .location-input {
+            .select-wrapper {
                 width: 100%;
             }
 
@@ -262,20 +270,11 @@
         <div class="search-controls">
             <div class="select-wrapper">
                 <input type="text" 
-                       id="countryInput" 
+                       id="locationInput" 
                        class="location-input" 
-                       placeholder="Type country name..."
+                       placeholder="Type country or city name..."
                        autocomplete="off">
-                <div id="countryDropdown" class="dropdown-list"></div>
-            </div>
-            <div class="select-wrapper">
-                <input type="text" 
-                       id="cityInput" 
-                       class="location-input" 
-                       placeholder="Type city name..."
-                       autocomplete="off"
-                       disabled>
-                <div id="cityDropdown" class="dropdown-list"></div>
+                <div id="locationDropdown" class="dropdown-list"></div>
             </div>
             <button id="nearbyButton" class="nearby-button">
                 📍 Find Nearby Matches
@@ -289,8 +288,7 @@
         let fixturesData = [];
         let countriesData = [];
         let userLocation = null;
-        let selectedCountry = '';
-        let selectedCity = '';
+        let selectedLocation = null;
 
         // First load both data sources
         async function initializeData() {
@@ -301,11 +299,13 @@
                 fixturesData = fixturesResult.fixtures;
                 displayFixtures(fixturesData);
 
-                // Load countries data from local file
+                // Load countries data
                 const countriesResponse = await fetch('countries+cities.json');
                 countriesData = await countriesResponse.json();
-                console.log('Countries loaded:', countriesData.length);
-                populateCountries();
+                console.log('Countries data loaded:', countriesData); // Debug log
+                
+                // Initialize autocomplete after data is loaded
+                setupLocationAutocomplete();
             } catch (error) {
                 console.error('Error loading data:', error);
             }
@@ -373,102 +373,16 @@
         // Filter fixtures by location
         function filterFixturesByLocation(country, city) {
             const filteredFixtures = fixturesData.filter(fixture => {
-                const matchesCountry = !country || fixture.venue.country === country;
-                const matchesCity = !city || fixture.venue.city === city;
-                return matchesCountry && matchesCity;
+                if (city) {
+                    return fixture.venue.city === city && fixture.venue.country === country;
+                }
+                return fixture.venue.country === country;
             });
             displayFixtures(filteredFixtures);
         }
 
         // Event Listeners
         document.addEventListener('DOMContentLoaded', () => {
-            const countryInput = document.getElementById('countryInput');
-            const cityInput = document.getElementById('cityInput');
-
-            countryInput.addEventListener('input', () => {
-                const searchText = countryInput.value.toLowerCase();
-                const matches = countriesData.filter(country => 
-                    country.name.toLowerCase().includes(searchText)
-                );
-
-                if (searchText && matches.length > 0) {
-                    countryDropdown.innerHTML = matches
-                        .map(country => `
-                            <div class="dropdown-item" data-value="${country.name}">
-                                ${country.emoji} ${country.name}
-                            </div>
-                        `)
-                        .join('');
-                    countryDropdown.style.display = 'block';
-
-                    // Add click handlers to dropdown items
-                    countryDropdown.querySelectorAll('.dropdown-item').forEach(item => {
-                        item.addEventListener('click', () => {
-                            selectedCountry = item.dataset.value;
-                            countryInput.value = item.textContent;
-                            countryDropdown.style.display = 'none';
-                            cityInput.disabled = false;
-                            cityInput.value = '';
-                            selectedCity = '';
-                            filterFixturesByLocation(selectedCountry, selectedCity);
-                        });
-                    });
-                } else {
-                    countryDropdown.style.display = 'none';
-                }
-            });
-
-            cityInput.addEventListener('input', () => {
-                const searchText = cityInput.value.toLowerCase();
-                const country = countriesData.find(c => c.name === selectedCountry);
-
-                console.log('Selected country:', selectedCountry); // Debug
-                console.log('Country data:', country); // Debug
-                console.log('Search text:', searchText); // Debug
-
-                if (country && searchText) {
-                    // Check if cities is an array of strings or array of objects
-                    const cities = Array.isArray(country.cities) ? country.cities : [];
-                    console.log('Available cities:', cities); // Debug
-
-                    const matches = cities.filter(city => {
-                        // Handle both string and object cases
-                        const cityName = typeof city === 'string' ? city : city.name;
-                        return cityName.toLowerCase().includes(searchText);
-                    });
-
-                    console.log('Matching cities:', matches); // Debug
-
-                    if (matches.length > 0) {
-                        cityDropdown.innerHTML = matches
-                            .map(city => {
-                                const cityName = typeof city === 'string' ? city : city.name;
-                                return `
-                                    <div class="dropdown-item" data-value="${cityName}">
-                                        ${cityName}
-                                    </div>
-                                `;
-                            })
-                            .join('');
-                        cityDropdown.style.display = 'block';
-
-                        // Add click handlers to dropdown items
-                        cityDropdown.querySelectorAll('.dropdown-item').forEach(item => {
-                            item.addEventListener('click', () => {
-                                selectedCity = item.dataset.value;
-                                cityInput.value = selectedCity;
-                                cityDropdown.style.display = 'none';
-                                filterFixturesByLocation(selectedCountry, selectedCity);
-                            });
-                        });
-                    } else {
-                        cityDropdown.style.display = 'none';
-                    }
-                } else {
-                    cityDropdown.style.display = 'none';
-                }
-            });
-
             initializeData();
 
             // Nearby button event
@@ -592,111 +506,95 @@
             `;
         }
 
-        function setupCountryAutocomplete() {
-            const countryInput = document.getElementById('countryInput');
-            const countryDropdown = document.getElementById('countryDropdown');
-            const cityInput = document.getElementById('cityInput');
+        function setupLocationAutocomplete() {
+            const locationInput = document.getElementById('locationInput');
+            const locationDropdown = document.getElementById('locationDropdown');
 
-            countryInput.addEventListener('input', () => {
-                const searchText = countryInput.value.toLowerCase();
-                const matches = countriesData.filter(country => 
-                    country.name.toLowerCase().includes(searchText)
-                );
+            locationInput.addEventListener('input', () => {
+                const searchText = locationInput.value.toLowerCase();
+                
+                if (searchText.length < 2) {
+                    locationDropdown.style.display = 'none';
+                    return;
+                }
 
-                if (searchText && matches.length > 0) {
-                    countryDropdown.innerHTML = matches
-                        .map(country => `
-                            <div class="dropdown-item" data-value="${country.name}">
-                                ${country.emoji} ${country.name}
+                // Search in both countries and cities
+                const matches = [];
+                
+                // Search countries
+                countriesData.forEach(country => {
+                    if (country.name.toLowerCase().includes(searchText)) {
+                        matches.push({
+                            type: 'country',
+                            name: country.name,
+                            emoji: country.emoji,
+                            display: `${country.emoji} ${country.name}`
+                        });
+                    }
+                    
+                    // Search cities
+                    if (Array.isArray(country.cities)) {
+                        country.cities.forEach(city => {
+                            const cityName = typeof city === 'string' ? city : city.name;
+                            if (cityName && cityName.toLowerCase().includes(searchText)) {
+                                matches.push({
+                                    type: 'city',
+                                    name: cityName,
+                                    country: country.name,
+                                    emoji: country.emoji,
+                                    display: `${country.emoji} ${cityName}, ${country.name}`
+                                });
+                            }
+                        });
+                    }
+                });
+
+                if (matches.length > 0) {
+                    locationDropdown.innerHTML = matches
+                        .map(match => `
+                            <div class="dropdown-item" 
+                                 data-type="${match.type}" 
+                                 data-name="${match.name}"
+                                 data-country="${match.type === 'city' ? match.country : match.name}">
+                                ${match.display}
                             </div>
                         `)
                         .join('');
-                    countryDropdown.style.display = 'block';
+                    locationDropdown.style.display = 'block';
 
                     // Add click handlers to dropdown items
-                    countryDropdown.querySelectorAll('.dropdown-item').forEach(item => {
+                    locationDropdown.querySelectorAll('.dropdown-item').forEach(item => {
                         item.addEventListener('click', () => {
-                            selectedCountry = item.dataset.value;
-                            countryInput.value = item.textContent;
-                            countryDropdown.style.display = 'none';
-                            cityInput.disabled = false;
-                            cityInput.value = '';
-                            selectedCity = '';
-                            filterFixturesByLocation(selectedCountry, selectedCity);
+                            const type = item.dataset.type;
+                            const name = item.dataset.name;
+                            const country = item.dataset.country;
+                            
+                            selectedLocation = {
+                                type,
+                                name,
+                                country
+                            };
+                            
+                            locationInput.value = item.textContent;
+                            locationDropdown.style.display = 'none';
+                            
+                            // Filter fixtures based on selection
+                            if (type === 'country') {
+                                filterFixturesByLocation(name, '');
+                            } else {
+                                filterFixturesByLocation(country, name);
+                            }
                         });
                     });
                 } else {
-                    countryDropdown.style.display = 'none';
+                    locationDropdown.style.display = 'none';
                 }
             });
 
             // Close dropdown when clicking outside
             document.addEventListener('click', (e) => {
-                if (!countryInput.contains(e.target) && !countryDropdown.contains(e.target)) {
-                    countryDropdown.style.display = 'none';
-                }
-            });
-        }
-
-        function setupCityAutocomplete() {
-            const cityInput = document.getElementById('cityInput');
-            const cityDropdown = document.getElementById('cityDropdown');
-
-            cityInput.addEventListener('input', () => {
-                const searchText = cityInput.value.toLowerCase();
-                const country = countriesData.find(c => c.name === selectedCountry);
-
-                console.log('Selected country:', selectedCountry); // Debug
-                console.log('Country data:', country); // Debug
-                console.log('Search text:', searchText); // Debug
-
-                if (country && searchText) {
-                    // Check if cities is an array of strings or array of objects
-                    const cities = Array.isArray(country.cities) ? country.cities : [];
-                    console.log('Available cities:', cities); // Debug
-
-                    const matches = cities.filter(city => {
-                        // Handle both string and object cases
-                        const cityName = typeof city === 'string' ? city : city.name;
-                        return cityName.toLowerCase().includes(searchText);
-                    });
-
-                    console.log('Matching cities:', matches); // Debug
-
-                    if (matches.length > 0) {
-                        cityDropdown.innerHTML = matches
-                            .map(city => {
-                                const cityName = typeof city === 'string' ? city : city.name;
-                                return `
-                                    <div class="dropdown-item" data-value="${cityName}">
-                                        ${cityName}
-                                    </div>
-                                `;
-                            })
-                            .join('');
-                        cityDropdown.style.display = 'block';
-
-                        // Add click handlers to dropdown items
-                        cityDropdown.querySelectorAll('.dropdown-item').forEach(item => {
-                            item.addEventListener('click', () => {
-                                selectedCity = item.dataset.value;
-                                cityInput.value = selectedCity;
-                                cityDropdown.style.display = 'none';
-                                filterFixturesByLocation(selectedCountry, selectedCity);
-                            });
-                        });
-                    } else {
-                        cityDropdown.style.display = 'none';
-                    }
-                } else {
-                    cityDropdown.style.display = 'none';
-                }
-            });
-
-            // Close dropdown when clicking outside
-            document.addEventListener('click', (e) => {
-                if (!cityInput.contains(e.target) && !cityDropdown.contains(e.target)) {
-                    cityDropdown.style.display = 'none';
+                if (!locationInput.contains(e.target) && !locationDropdown.contains(e.target)) {
+                    locationDropdown.style.display = 'none';
                 }
             });
         }
