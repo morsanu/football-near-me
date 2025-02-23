@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Fixtures Search</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #1a73e8;
+            --secondary-color: #f8f9fa;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f2f5;
+            color: #1a1a1a;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .search-container {
+            text-align: center;
+            margin: 30px 0;
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+        }
+
+        #searchInput {
+            padding: 16px 24px;
+            width: 400px;
+            font-size: 16px;
+            border: none;
+            border-radius: var(--border-radius);
+            background-color: white;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        #searchInput:focus {
+            outline: none;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-2px);
+        }
+
+        .date-group {
+            background-color: white;
+            margin: 24px 0;
+            padding: 24px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .date-group:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .date-header {
+            background-color: var(--secondary-color);
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            border-radius: var(--border-radius);
+            font-weight: 600;
+            color: var(--primary-color);
+            font-size: 1.1em;
+        }
+
+        .fixture {
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 20px;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            transition: var(--transition);
+        }
+
+        .fixture:last-child {
+            border-bottom: none;
+        }
+
+        .fixture:hover {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .match-time {
+            font-weight: 500;
+            color: #444;
+            min-width: 80px;
+        }
+
+        .teams-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .team {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .team-logo {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+        }
+
+        .vs {
+            color: #666;
+            font-weight: 500;
+            margin: 0 10px;
+        }
+
+        .competition-info {
+            text-align: right;
+        }
+
+        .competition-name {
+            font-weight: 500;
+            color: var(--primary-color);
+            margin-bottom: 5px;
+        }
+
+        .venue-info {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        @media (max-width: 768px) {
+            #searchInput {
+                width: 90%;
+            }
+
+            .fixture {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .competition-info {
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Football Fixtures</h1>
+    </div>
+    
+    <div class="search-container">
+        <input type="text" 
+               id="searchInput" 
+               placeholder="🔍 Search by city, country, or stadium..."
+               autocomplete="off">
+    </div>
+    <div id="results"></div>
+
+    <script>
+        let fixturesData = [];
+
+        // Fetch the fixtures data when the page loads
+        fetch('fixtures.json')
+            .then(response => response.json())
+            .then(data => {
+                fixturesData = data.fixtures;
+                // Initial display of all fixtures
+                displayFixtures(fixturesData);
+            })
+            .catch(error => console.error('Error loading fixtures:', error));
+
+        // Add event listener for search input
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filteredFixtures = fixturesData.filter(fixture => {
+                const venue = fixture.venue;
+                return venue.city.toLowerCase().includes(searchTerm) ||
+                       venue.country.toLowerCase().includes(searchTerm) ||
+                       venue.name.toLowerCase().includes(searchTerm);
+            });
+            displayFixtures(filteredFixtures);
+        });
+
+        function displayFixtures(fixtures) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (fixtures.length === 0) {
+                resultsDiv.innerHTML = '<div class="no-results">No matches found</div>';
+                return;
+            }
+
+            // Group fixtures by date
+            const groupedFixtures = groupByDate(fixtures);
+            
+            // Sort dates
+            const sortedDates = Object.keys(groupedFixtures).sort();
+            
+            let html = '';
+            
+            sortedDates.forEach(date => {
+                const fixtures = groupedFixtures[date];
+                html += `
+                    <div class="date-group">
+                        <div class="date-header">${formatDate(date)}</div>
+                        ${fixtures.map(fixture => createFixtureHtml(fixture)).join('')}
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = html;
+        }
+
+        function groupByDate(fixtures) {
+            return fixtures.reduce((groups, fixture) => {
+                const date = fixture.match.dateTime.split('T')[0];
+                if (!groups[date]) {
+                    groups[date] = [];
+                }
+                groups[date].push(fixture);
+                return groups;
+            }, {});
+        }
+
+        function formatDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        function createFixtureHtml(fixture) {
+            const matchTime = new Date(fixture.match.dateTime).toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            return `
+                <div class="fixture">
+                    <div class="match-time">${matchTime}</div>
+                    <div class="teams-container">
+                        <div class="team">
+                            <img class="team-logo" src="${fixture.match.homeTeam.logo}" alt="${fixture.match.homeTeam.name}">
+                            <span>${fixture.match.homeTeam.name}</span>
+                        </div>
+                        <span class="vs">vs</span>
+                        <div class="team">
+                            <img class="team-logo" src="${fixture.match.awayTeam.logo}" alt="${fixture.match.awayTeam.name}">
+                            <span>${fixture.match.awayTeam.name}</span>
+                        </div>
+                    </div>
+                    <div class="competition-info">
+                        <div class="competition-name">${fixture.match.competition.name}</div>
+                        <div class="venue-info">
+                            ${fixture.venue.name}, ${fixture.venue.city}, ${fixture.venue.country}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html> 

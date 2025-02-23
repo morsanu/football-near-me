@@ -1,0 +1,136 @@
+{
+  "fixtures": [
+    {
+      "id": "f001",
+      "venue": {
+        "name": "Santiago Bernabéu",
+        "city": "Madrid",
+        "country": "Spain",
+        "coordinates": {
+          "latitude": 40.4530541,
+          "longitude": -3.6883445
+        },
+        "capacity": 81044,
+        "surface": "Grass"
+      },
+      "match": {
+        "dateTime": "2024-04-10T20:00:00Z",
+        "competition": {
+          "name": "UEFA Champions League",
+          "round": "Quarter-final",
+          "logo": "https://example.com/ucl-logo.png"
+        },
+        "homeTeam": {
+          "id": "rm001",
+          "name": "Real Madrid",
+          "shortName": "RMA",
+          "logo": "https://example.com/real-madrid-logo.png",
+          "primaryColor": "#FFFFFF",
+          "secondaryColor": "#000000"
+        },
+        "awayTeam": {
+          "id": "mc001",
+          "name": "Manchester City",
+          "shortName": "MCI",
+          "logo": "https://example.com/man-city-logo.png",
+          "primaryColor": "#98C5E9",
+          "secondaryColor": "#FFFFFF"
+        },
+        "status": "SCHEDULED",
+        "referees": {
+          "main": "Anthony Taylor",
+          "assistants": ["Gary Beswick", "Adam Nunn"],
+          "fourth": "Michael Oliver",
+          "var": "Stuart Attwell"
+        }
+      },
+      "ticketing": {
+        "available": true,
+        "priceRange": {
+          "min": 50,
+          "max": 250,
+          "currency": "EUR"
+        },
+        "ticketingUrl": "https://example.com/tickets/f001"
+      },
+      "broadcast": {
+        "channels": [
+          {
+            "name": "BT Sport",
+            "country": "United Kingdom"
+          },
+          {
+            "name": "Movistar+",
+            "country": "Spain"
+          }
+        ]
+      }
+    },
+    {
+      "id": "f002",
+      "venue": {
+        "name": "Allianz Arena",
+        "city": "Munich",
+        "country": "Germany",
+        "coordinates": {
+          "latitude": 48.2187,
+          "longitude": 11.6247
+        },
+        "capacity": 75024,
+        "surface": "Grass"
+      },
+      "match": {
+        "dateTime": "2024-04-13T16:30:00Z",
+        "competition": {
+          "name": "Bundesliga",
+          "round": "Matchday 29",
+          "logo": "https://example.com/bundesliga-logo.png"
+        },
+        "homeTeam": {
+          "id": "fcb001",
+          "name": "Bayern Munich",
+          "shortName": "BAY",
+          "logo": "https://example.com/bayern-logo.png",
+          "primaryColor": "#DC052D",
+          "secondaryColor": "#FFFFFF"
+        },
+        "awayTeam": {
+          "id": "bvb001",
+          "name": "Borussia Dortmund",
+          "shortName": "BVB",
+          "logo": "https://example.com/dortmund-logo.png",
+          "primaryColor": "#FDE100",
+          "secondaryColor": "#000000"
+        },
+        "status": "SCHEDULED",
+        "referees": {
+          "main": "Felix Brych",
+          "assistants": ["Mark Borsch", "Stefan Lupp"],
+          "fourth": "Daniel Siebert",
+          "var": "Marco Fritz"
+        }
+      },
+      "ticketing": {
+        "available": true,
+        "priceRange": {
+          "min": 35,
+          "max": 180,
+          "currency": "EUR"
+        },
+        "ticketingUrl": "https://example.com/tickets/f002"
+      },
+      "broadcast": {
+        "channels": [
+          {
+            "name": "Sky Sport",
+            "country": "Germany"
+          },
+          {
+            "name": "ESPN+",
+            "country": "United States"
+          }
+        ]
+      }
+    }
+  ]
+}
