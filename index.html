@@ -259,6 +259,18 @@
                 justify-content: center;
             }
         }
+
+        .error-message {
+            color: #721c24;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 10px;
+            font-size: 14px;
+            line-height: 1.5;
+            text-align: left;
+        }
     </style>
 </head>
 <body>
@@ -446,7 +458,33 @@
                         },
                         (error) => {
                             console.error('Geolocation error:', error);
-                            statusDiv.textContent = `Error accessing location: ${error.message}`;
+                            let errorMessage = "";
+                            switch(error.code) {
+                                case error.PERMISSION_DENIED:
+                                    errorMessage = "Please enable location access in your browser settings. For Chrome: Settings → Location → Allow";
+                                    break;
+                                case error.POSITION_UNAVAILABLE:
+                                    errorMessage = "Location information unavailable. Please check your device settings.";
+                                    break;
+                                case error.TIMEOUT:
+                                    errorMessage = "Location request timed out. Please try again.";
+                                    break;
+                                default:
+                                    errorMessage = "An unknown error occurred. Please try again.";
+                            }
+                            statusDiv.innerHTML = `
+                                <div class="error-message">
+                                    ${errorMessage}
+                                    ${error.code === error.PERMISSION_DENIED ? 
+                                        '<br><br>For Chrome mobile:<br>1. Go to Settings (three dots)<br>2. Site Settings → Location<br>3. Find this website and allow location access' 
+                                        : ''}
+                                </div>
+                            `;
+                        },
+                        {
+                            enableHighAccuracy: true,
+                            timeout: 10000,
+                            maximumAge: 0
                         }
                     );
                 } else {
